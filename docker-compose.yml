@@ -25,6 +25,22 @@ services:
       - rate-limiter-network
     restart: unless-stopped
 
+  dashboard:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rate-limiter-dashboard
+    depends_on:
+      - rate-limiter-app
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080/api/v1
+      VITE_WS_URL: ws://localhost:8080/ws/analytics
+    ports:
+      - "5173:5173"
+    networks:
+      - rate-limiter-network
+    restart: unless-stopped
+
   redis:
     image: redis:7.2-alpine
     container_name: rate-limiter-redis
