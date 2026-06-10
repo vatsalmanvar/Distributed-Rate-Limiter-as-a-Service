@@ -38,20 +38,23 @@ public class RateLimiterService {
     private final AlgorithmFactory algorithmFactory;
     private final KafkaTemplate<String, RateLimitEvent> kafkaTemplate;
     private final Clock clock;
+    private final RateLimitEventBroadcaster eventBroadcaster;
 
     public RateLimiterService(TenantService tenantService, RateLimitRuleRepository ruleRepository,
                               AlgorithmFactory algorithmFactory,
-                              KafkaTemplate<String, RateLimitEvent> kafkaTemplate) {
-        this(tenantService, ruleRepository, algorithmFactory, kafkaTemplate, Clock.systemUTC());
+                              KafkaTemplate<String, RateLimitEvent> kafkaTemplate,
+                              RateLimitEventBroadcaster eventBroadcaster) {
+        this(tenantService, ruleRepository, algorithmFactory, kafkaTemplate, eventBroadcaster, Clock.systemUTC());
     }
 
     RateLimiterService(TenantService tenantService, RateLimitRuleRepository ruleRepository,
                        AlgorithmFactory algorithmFactory, KafkaTemplate<String, RateLimitEvent> kafkaTemplate,
-                       Clock clock) {
+                       RateLimitEventBroadcaster eventBroadcaster, Clock clock) {
         this.tenantService = tenantService;
         this.ruleRepository = ruleRepository;
         this.algorithmFactory = algorithmFactory;
         this.kafkaTemplate = kafkaTemplate;
+        this.eventBroadcaster = eventBroadcaster;
         this.clock = clock;
     }
 
@@ -70,8 +73,10 @@ public class RateLimiterService {
             boolean allowed = rule.getFailStrategy() == FailStrategy.FAIL_OPEN;
             result = new RateLimitResult(allowed, 0, allowed ? 0 : rule.getWindowSizeMs(), rule.getWindowSizeMs());
         }
-        publishEvent(new RateLimitEvent(tenant.getId(), identifier, normalizeEndpoint(request.endpoint()), result.allowed(),
-                rule.getAlgorithm().name(), nowMs, result.remaining()));
+        RateLimitEvent event = new RateLimitEvent(tenant.getId(), identifier, normalizeEndpoint(request.endpoint()),
+                result.allowed(), rule.getAlgorithm().name(), nowMs, result.remaining());
+        publishEvent(event);
+        eventBroadcaster.publish(event);
         return new RateLimitCheckResponse(result.allowed(), result.remaining(), result.retryAfterMs(), result.resetAfterMs(),
                 tenant.getId(), rule.getId(), rule.getAlgorithm());
     }
