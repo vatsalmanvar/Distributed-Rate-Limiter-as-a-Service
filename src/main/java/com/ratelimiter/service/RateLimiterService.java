@@ -19,6 +19,7 @@ import java.util.HexFormat;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class RateLimiterService {
     private final Clock clock;
     private final RateLimitEventBroadcaster eventBroadcaster;
 
+    @Autowired
     public RateLimiterService(TenantService tenantService, RateLimitRuleRepository ruleRepository,
                               AlgorithmFactory algorithmFactory,
                               KafkaTemplate<String, RateLimitEvent> kafkaTemplate,
